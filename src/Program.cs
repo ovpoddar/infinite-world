@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 
@@ -37,7 +38,7 @@ partial class ExportClasses
     static double dirX = -1, dirY = 0;
     static double planeX = 0, planeY = 0.66;
     static KeyState keyState;
-    static byte[] data;
+    static IntPtr data;
 
 
     [JSExport]
@@ -88,17 +89,15 @@ partial class ExportClasses
     }
 
     [JSExport]
-    public static unsafe byte[] ComputeFrame(int width, int height)
+    public static unsafe IntPtr ComputeFrame(int width, int height)
     {
-        if (data == null)
-            data = new byte[width * height * 4];
+        if (data != IntPtr.Zero)
+            Marshal.FreeHGlobal(data);
+        data = Marshal.AllocHGlobal(sizeof(byte) * width * height * 4);
 
-        fixed (byte* ptr = data)
-        {
-            var size = width * height / 2;
-            new Span<Pixels>(ptr, size).Fill(new Pixels { Red = 17, Blue = 0, Green = 0, Alpha = 255 });
-            new Span<Pixels>((int*)ptr + size, size).Fill(new Pixels { Red = 51, Blue = 51, Green = 51, Alpha = 255 });
-        }
+        var size = width * height / 2;
+        new Span<Pixels>((void*)data, size).Fill(new Pixels { Red = 17, Blue = 0, Green = 0, Alpha = 255 });
+        new Span<Pixels>((int*)data + size, size).Fill(new Pixels { Red = 51, Blue = 51, Green = 51, Alpha = 255 });
 
         for (int x = 0; x < width; x++)
         {
@@ -181,14 +180,19 @@ partial class ExportClasses
                 color.Green -= 22;
                 color.Blue -= 22;
             }
-            fixed (byte* ptr = data)
-            {
-                for (int y = drawStart; y < drawEnd; y++)
-                    *(Pixels*)(ptr + (x + y * width) * 4) = color;
-            }
+            for (int y = drawStart; y < drawEnd; y++)
+                *(Pixels*)(data + (x + y * width) * 4) = color;
 
         }
         return data;
+    }
+
+    [JSExport]
+    public static byte[] Minimap()
+    {
+        var result = WorldMap.ToArray();
+        result[(int)(posX + posY * 24)] = 10;
+        return result;
     }
 }
 
