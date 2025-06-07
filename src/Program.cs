@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 return 0;
 partial class ExportClasses
@@ -193,6 +194,13 @@ partial class ExportClasses
         var result = WorldMap.ToArray();
         result[(int)(posX + posY * 24)] = 10;
         return result;
+    }
+
+    [JSExport]
+    [return: JSMarshalAs<MemoryView>]
+    public static unsafe Span<byte> GetMem()
+    {
+        return new Span<byte>((void*)data, 10);
     }
 }
 
